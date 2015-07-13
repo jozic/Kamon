@@ -130,7 +130,7 @@ class HdrHistogram(dynamicRange: DynamicRange) extends AtomicHistogram(dynamicRa
 
   def getCounts = countsArray().length()
 
-  def cleanup: Unit = {}
+  def cleanup(): Unit = {}
 
   private def writeSnapshotTo(buffer: LongBuffer): Long = {
     val counts = countsArray()

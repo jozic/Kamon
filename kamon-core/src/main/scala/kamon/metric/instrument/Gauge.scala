@@ -108,7 +108,7 @@ class HistogramBackedGauge(underlyingHistogram: Histogram, currentValueCollector
 
   def collect(context: CollectionContext): Histogram.Snapshot = underlyingHistogram.collect(context)
 
-  def cleanup: Unit = {
+  def cleanup(): Unit = {
     if (automaticValueCollectorSchedule.get() != null)
       automaticValueCollectorSchedule.get().cancel()
   }

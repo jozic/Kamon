@@ -26,7 +26,7 @@ import scala.concurrent.duration.FiniteDuration
 
 trait EntityRecorder {
   def collect(collectionContext: CollectionContext): EntitySnapshot
-  def cleanup: Unit
+  def cleanup(): Unit
 }
 
 trait EntityRecorderFactory[T <: EntityRecorder] {
@@ -55,7 +55,7 @@ private[kamon] sealed trait SingleInstrumentEntityRecorder extends EntityRecorde
   def collect(collectionContext: CollectionContext): EntitySnapshot =
     new DefaultEntitySnapshot(Map(key -> instrument.collect(collectionContext)))
 
-  def cleanup: Unit = instrument.cleanup
+  def cleanup(): Unit = instrument.cleanup
 }
 
 object SingleInstrumentEntityRecorder {

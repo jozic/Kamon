@@ -26,7 +26,7 @@ private[kamon] trait Instrument {
   type SnapshotType <: InstrumentSnapshot
 
   def collect(context: CollectionContext): SnapshotType
-  def cleanup: Unit
+  def cleanup(): Unit
 }
 
 trait InstrumentSnapshot {

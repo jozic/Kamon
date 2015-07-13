@@ -47,8 +47,8 @@ class DiffRecordingHistogram(wrappedHistogram: Histogram) extends Histogram {
   def record(value: Long, count: Long): Unit =
     processRecording(value, count)
 
-  def cleanup: Unit =
-    wrappedHistogram.cleanup
+  def cleanup(): Unit =
+    wrappedHistogram.cleanup()
 
   def collect(context: CollectionContext): Histogram.Snapshot =
     wrappedHistogram.collect(context)

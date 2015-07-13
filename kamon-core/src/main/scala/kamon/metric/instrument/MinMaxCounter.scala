@@ -77,7 +77,7 @@ class PaddedMinMaxCounter(underlyingHistogram: Histogram) extends MinMaxCounter 
     underlyingHistogram.collect(context)
   }
 
-  def cleanup: Unit = {
+  def cleanup(): Unit = {
     if (refreshValuesSchedule.get() != null)
       refreshValuesSchedule.get().cancel()
   }

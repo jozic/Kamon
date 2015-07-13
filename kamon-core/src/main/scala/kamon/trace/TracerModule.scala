@@ -42,7 +42,7 @@ object Tracer {
   def setCurrentContext(context: TraceContext): Unit =
     _traceContextStorage.set(context)
 
-  def clearCurrentContext: Unit =
+  def clearCurrentContext(): Unit =
     _traceContextStorage.remove()
 
   def withContext[T](context: TraceContext)(code: ⇒ T): T = {
