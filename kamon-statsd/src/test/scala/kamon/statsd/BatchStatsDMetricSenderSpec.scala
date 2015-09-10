@@ -27,7 +27,7 @@ import akka.io.Udp
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import com.typesafe.config.ConfigFactory
 
-class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") {
+class BatchStatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") {
   override lazy val config =
     ConfigFactory.parseString(
       """
@@ -39,8 +39,8 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
         |      include-hostname = true
         |      metric-name-normalization-strategy = normalize
         |    }
-        |    metric-sender-factory = kamon.statsd.SimpleStatsDMetricsSender
-        |    simple-metric-sender {
+        |    metric-sender-factory = kamon.statsd.BatchStatsDMetricsSender
+        |    batch-metric-sender {
         |      max-packet-size = 1024
         |      hostname = "127.0.0.1"
         |      port = 0
@@ -54,7 +54,7 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
     override def hostName: String = "localhost_local"
   }
 
-  "the StatsDMetricSender" should {
+  "the BatchStatsDMetricSender" should {
     "flush the metrics data after processing the tick, even if the max-packet-size is not reached" in new UdpListenerFixture {
       val testMetricKey = buildMetricKey(testEntity, "metric-one")
       val testRecorder = buildRecorder("user/kamon")
@@ -144,7 +144,7 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new SimpleStatsDMetricsSender(config, metricKeyGenerator) {
+      val metricsSender = system.actorOf(Props(new BatchStatsDMetricsSender(config, metricKeyGenerator) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
