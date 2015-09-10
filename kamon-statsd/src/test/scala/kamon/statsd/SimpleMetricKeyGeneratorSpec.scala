@@ -17,7 +17,7 @@ class SimpleMetricKeyGeneratorSpec extends WordSpec with Matchers {
       |}
     """.stripMargin)
 
-  "the StatsDMetricSender" should {
+  "the SimpleMetricKeyGenerator" should {
     "generate metric names that follow the application.host.entity.entity-name.metric-name pattern by default" in {
       implicit val metricKeyGenerator = new SimpleMetricKeyGenerator(defaultConfiguration) {
         override def hostName: String = "localhost"

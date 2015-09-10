@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,19 +16,26 @@
 
 package kamon.statsd
 
-import akka.actor.{ ActorSystem, Props, ActorRef, Actor }
+import akka.actor.{ Actor, ActorSystem, Props, ActorRef }
 import akka.io.{ Udp, IO }
 import java.net.InetSocketAddress
 import akka.util.ByteString
+import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
 import java.text.{ DecimalFormatSymbols, DecimalFormat }
 import java.util.Locale
 
 import kamon.metric.instrument.{ Counter, Histogram }
 
-class StatsDMetricsSender(statsDHost: String, statsDPort: Int, maxPacketSizeInBytes: Long, metricKeyGenerator: MetricKeyGenerator)
+class SimpleStatsDMetricsSender(config: Config, metricKeyGenerator: MetricKeyGenerator)
     extends Actor with UdpExtensionProvider {
   import context.system
+
+  val configSettings = config.getConfig("kamon.statsd.simple-metric-sender")
+  //TODO for eugene : make it backward compatible
+  val maxPacketSizeInBytes = configSettings.getBytes("max-packet-size")
+  val statsDHost = configSettings.getString("hostname")
+  val statsDPort = configSettings.getInt("port")
 
   val symbols = DecimalFormatSymbols.getInstance(Locale.US)
   symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
@@ -81,9 +88,13 @@ class StatsDMetricsSender(statsDHost: String, statsDPort: Int, maxPacketSizeInBy
   def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 }
 
-object StatsDMetricsSender {
-  def props(statsDHost: String, statsDPort: Int, maxPacketSize: Long, metricKeyGenerator: MetricKeyGenerator): Props =
-    Props(new StatsDMetricsSender(statsDHost, statsDPort, maxPacketSize, metricKeyGenerator))
+trait StatsDMetricsSenderFactory {
+  def props(config: Config, metricKeyGenerator: MetricKeyGenerator): Props
+}
+
+object SimpleStatsDMetricsSender extends StatsDMetricsSenderFactory {
+  override def props(config: Config, metricKeyGenerator: MetricKeyGenerator): Props =
+    Props(new SimpleStatsDMetricsSender(config, metricKeyGenerator))
 }
 
 trait UdpExtensionProvider {

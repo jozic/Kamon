@@ -1,6 +1,6 @@
 /*
  * =========================================================================================
- * Copyright © 2013-2014 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2015 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -16,17 +16,15 @@
 
 package kamon.statsd
 
-import akka.testkit.{ TestKitBase, TestProbe }
+import akka.testkit.TestProbe
 import akka.actor.{ ActorRef, Props, ActorSystem }
 import kamon.Kamon
 import kamon.metric.instrument.{ InstrumentFactory, UnitOfMeasurement }
 import kamon.testkit.BaseKamonSpec
 import kamon.util.MilliTimestamp
-import org.scalatest.{ Matchers, WordSpecLike }
 import kamon.metric._
 import akka.io.Udp
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import java.net.InetSocketAddress
 import com.typesafe.config.ConfigFactory
 
 class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") {
@@ -34,11 +32,19 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
     ConfigFactory.parseString(
       """
         |kamon {
-        |  statsd.simple-metric-key-generator {
-        |    application = kamon
-        |    hostname-override = kamon-host
-        |    include-hostname = true
-        |    metric-name-normalization-strategy = normalize
+        |  statsd {
+        |    simple-metric-key-generator {
+        |      application = kamon
+        |      hostname-override = kamon-host
+        |      include-hostname = true
+        |      metric-name-normalization-strategy = normalize
+        |    }
+        |    metric-sender-factory = kamon.statsd.SimpleStatsDMetricsSender
+        |    simple-metric-sender {
+        |      max-packet-size = 1024
+        |      hostname = "127.0.0.1"
+        |      port = 0
+        |    }
         |  }
         |}
         |
@@ -138,7 +144,7 @@ class StatsDMetricSenderSpec extends BaseKamonSpec("statsd-metric-sender-spec") 
 
     def setup(metrics: Map[Entity, EntitySnapshot]): TestProbe = {
       val udp = TestProbe()
-      val metricsSender = system.actorOf(Props(new StatsDMetricsSender("127.0.0.1", 0, testMaxPacketSize, metricKeyGenerator) {
+      val metricsSender = system.actorOf(Props(new SimpleStatsDMetricsSender(config, metricKeyGenerator) {
         override def udpExtension(implicit system: ActorSystem): ActorRef = udp.ref
       }))
 
