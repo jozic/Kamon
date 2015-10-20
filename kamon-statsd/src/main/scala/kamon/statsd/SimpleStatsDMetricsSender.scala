@@ -19,7 +19,7 @@ package kamon.statsd
 import akka.actor.Props
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
-import kamon.metric.instrument.{ Counter, Histogram }
+import kamon.metric.instrument.{Counter, Histogram}
 
 /**
  * Factory for [[SimpleStatsDMetricsSender]].
@@ -51,11 +51,13 @@ class SimpleStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: Metric
       metricSnapshot match {
         case hs: Histogram.Snapshot ⇒
           hs.recordsIterator.foreach { record ⇒
-            flushToUDP(keyPrefix + encodeStatsDTimer(record.level, record.count))
+            val rescaled: Long = rescaler.rescale(metricKey.unitOfMeasurement, record.level)
+            flushToUDP(keyPrefix + encodeStatsDTimer(rescaled, record.count))
           }
 
         case cs: Counter.Snapshot ⇒
-          flushToUDP(keyPrefix + encodeStatsDCounter(cs.count))
+          val rescaled: Long = rescaler.rescale(metricKey.unitOfMeasurement, cs.count)
+          flushToUDP(keyPrefix + encodeStatsDCounter(rescaled))
       }
     }
   }

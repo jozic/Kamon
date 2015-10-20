@@ -24,6 +24,44 @@ import akka.io.{ IO, Udp }
 import akka.util.ByteString
 import com.typesafe.config.Config
 import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
+import kamon.metric.instrument.{Memory, UnitOfMeasurement, Time}
+import kamon.util.ConfigTools._
+
+class RescaleUnits(config: Config) {
+
+  val RescaleTimeTo = "rescale-time-to"
+  val RescaleMemoryTo = "rescale-memory-to"
+
+  lazy val rescaleTimeTo: Option[Time] =
+    if (config.hasPath(RescaleTimeTo)) Some(config.time(RescaleTimeTo)) else None
+
+  lazy val rescaleMemoryTo: Option[Memory] =
+    if (config.hasPath(RescaleMemoryTo)) Some(config.memory(RescaleMemoryTo)) else None
+
+  def rescale(unit: UnitOfMeasurement, value: Long): Long = (unit, rescaleTimeTo, rescaleMemoryTo) match {
+    case (from: Time, Some(to), _) ⇒ from.scale(to)(value).toLong
+    case (from: Memory, _, Some(to)) ⇒ from.scale(to)(value).toLong
+    case _ ⇒ value
+  }
+
+}
+
+trait StatsDValueFormatters {
+
+  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
+  symbols.setDecimalSeparator('.')
+  // Just in case there is some weird locale config we are not aware of.
+
+  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
+  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
+
+  def encodeStatsDTimer(level: Long, count: Long): String = {
+    val samplingRate: Double = 1D / count
+    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
+  }
+
+  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
+}
 
 /**
  * Base class for different StatsD senders utilizing UDP protocol. It implies use of one statsd server.
@@ -31,18 +69,13 @@ import kamon.metric.SubscriptionsDispatcher.TickMetricSnapshot
  * @param metricKeyGenerator Key generator for all metrics sent by this sender
  */
 abstract class UDPBasedStatsDMetricsSender(statsDConfig: Config, metricKeyGenerator: MetricKeyGenerator)
-    extends Actor with UdpExtensionProvider {
+    extends Actor with UdpExtensionProvider with StatsDValueFormatters {
 
   import context.system
 
   val statsDHost = statsDConfig.getString("hostname")
   val statsDPort = statsDConfig.getInt("port")
-
-  val symbols = DecimalFormatSymbols.getInstance(Locale.US)
-  symbols.setDecimalSeparator('.') // Just in case there is some weird locale config we are not aware of.
-
-  // Absurdly high number of decimal digits, let the other end lose precision if it needs to.
-  val samplingRateFormat = new DecimalFormat("#.################################################################", symbols)
+  val rescaler = new RescaleUnits(statsDConfig)
 
   udpExtension ! Udp.SimpleSender
 
@@ -60,13 +93,6 @@ abstract class UDPBasedStatsDMetricsSender(statsDConfig: Config, metricKeyGenera
   }
 
   def writeMetricsToRemote(tick: TickMetricSnapshot, flushToUDP: String ⇒ Unit): Unit
-
-  def encodeStatsDTimer(level: Long, count: Long): String = {
-    val samplingRate: Double = 1D / count
-    level.toString + "|ms" + (if (samplingRate != 1D) "|@" + samplingRateFormat.format(samplingRate) else "")
-  }
-
-  def encodeStatsDCounter(count: Long): String = count.toString + "|c"
 
 }
 
